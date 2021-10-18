@@ -68,6 +68,9 @@ struct SeatPrivate
 
     /* The greeter to be started to replace the current one */
     GreeterSession *replacement_greeter;
+
+    /* TRUE before the display server has successfully started */
+    gboolean starting;
 };
 
 static void seat_logger_iface_init (LoggerInterface *iface);
@@ -432,6 +435,13 @@ static void
 display_server_stopped_cb (DisplayServer *display_server, Seat *seat)
 {
     l_debug (seat, "Display server stopped");
+
+    if (seat->priv->starting)
+    {
+        l_debug (seat, "Failed to start display server - trying to restart");
+        start_display_server (seat, display_server);
+        return;
+    }
 
     /* Run a script right after stopping the display server */
     const gchar *script = seat_get_string_property (seat, "display-stopped-script");
@@ -1281,6 +1291,7 @@ static void
 display_server_ready_cb (DisplayServer *display_server, Seat *seat)
 {
     /* Run setup script */
+    seat->priv->starting = FALSE;
     const gchar *script = seat_get_string_property (seat, "display-setup-script");
     if (script && !run_script (seat, display_server, script, NULL))
     {
@@ -1649,6 +1660,7 @@ seat_real_start (Seat *seat)
 
             DisplayServer *display_server = create_display_server (seat, session);
             session_set_display_server (session, display_server);
+            seat->priv->starting = TRUE;
             if (!display_server || !start_display_server (seat, display_server))
             {
                 l_debug (seat, "Can't create display server for automatic login");

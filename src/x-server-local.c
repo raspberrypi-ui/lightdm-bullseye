@@ -417,7 +417,6 @@ x_server_local_start (DisplayServer *display_server)
 {
     XServerLocal *server = X_SERVER_LOCAL (display_server);
 
-    g_return_val_if_fail (server->priv->x_server_process == NULL, FALSE);
 
     server->priv->got_signal = FALSE;
 
